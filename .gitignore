@@ -1,0 +1,52 @@
+# Node modules
+node_modules/
+
+# Environment variables (contains sensitive credentials)
+config.env
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+*.js
+*.js.map
+!playwright.config.js
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Screenshots (error screenshots from Playwright)
+screenshots/
+*.png
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test results
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Downloads folder
+downloads/
+D:\MayoDownload/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
