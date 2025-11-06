@@ -227,7 +227,7 @@ export class MediaShuttleService {
 
     const logFilterConditions = {
       titlePrefix: "Received",
-      date: "Nov 2, 2025",
+      lastSync: new Date("2025-11-05T23:59:59"),
     };
 
     const filesFilterConditions = {
@@ -284,32 +284,24 @@ export class MediaShuttleService {
             const fileName = await item
               .locator(".activity-item__subtext")
               .textContent();
-            const date = await item
-              .locator(".activity-item__date")
-              .textContent();
+
             const title = await item
               .locator(".activity-item__info b")
               .textContent();
 
             const fileNameTrimmed = fileName?.trim() || "";
-            const dateTrimmed = date?.trim() || "";
             const titleTrimmed = title?.trim() || "";
-
-            const matchesDate = logFilterConditions.date
-              ? dateTrimmed.includes(logFilterConditions.date)
-              : true;
 
             const matchesTitle = logFilterConditions.titlePrefix
               ? titleTrimmed.startsWith(logFilterConditions.titlePrefix)
               : true;
 
-            if (matchesDate && matchesTitle) {
+            if (matchesTitle) {
               this.logger.log(
-                `✓ Found matching item - Title: "${titleTrimmed}", Date: "${dateTrimmed}"`
+                `✓ Found matching item - Title: "${titleTrimmed}"`
               );
               matchedLog = {
                 fileName: fileNameTrimmed,
-                date: dateTrimmed,
                 element: item,
               };
               foundMatchedLog = true;
@@ -343,61 +335,29 @@ export class MediaShuttleService {
           await matchedLog.element.click();
         }
 
-        //   const activityItemsLocator = activityDialog.locator(".activity-item");
-        //   const activityItemsCount = await activityItemsLocator.count();
+        await page.waitForTimeout(1000);
 
-        //   this.logger.log(`Found ${activityItemsCount} total activity items`);
-        //   if (activityItemsCount === 0) return;
+        const activitySubtitle = page
+          .locator(".activity-description__subtitle")
+          .first();
 
-        //   const filteredResults = [];
-        //   const activityItems = await activityItemsLocator.all();
+        if (!(await activitySubtitle.isVisible().catch(() => false))) {
+          this.logger.warn("Activity subtitle not found!");
+          return;
+        }
 
-        //   for (const item of activityItems) {
-        //     const fileName = await item
-        //       .locator(".activity-item__subtext")
-        //       .textContent();
-        //     const date = await item.locator(".activity-item__date").textContent();
-        //     const title = await item
-        //       .locator(".activity-item__info b")
-        //       .textContent();
+        const subtitleText = await activitySubtitle.textContent();
+        const subtitleTrimmed = subtitleText?.trim() || "";
 
-        //     const fileNameTrimmed = fileName?.trim() || "";
-        //     const dateTrimmed = date?.trim() || "";
-        //     const titleTrimmed = title?.trim() || "";
+        const activityTimestamp = new Date(subtitleTrimmed);
 
-        //     const matchesDate = logFilterConditions.date
-        //       ? dateTrimmed.includes(logFilterConditions.date)
-        //       : true;
-
-        //     const matchesTitle = logFilterConditions.titlePrefix
-        //       ? titleTrimmed.startsWith(logFilterConditions.titlePrefix)
-        //       : true;
-
-        //     if (matchesDate && matchesTitle) {
-        //       filteredResults.push({
-        //         fileName: fileNameTrimmed,
-        //         date: dateTrimmed,
-        //         element: item,
-        //       });
-        //     }
-        //   }
-
-        //   const filteredItemCount = filteredResults.length;
-        //   this.logger.log(
-        //     `Filtered to ${filteredItemCount} activity items matching conditions`
-        //   );
-
-        //   if (filteredItemCount === 0) return;
-
-        // Click filtered activity items
-        // const firstResult = filteredResults[0];
-
-        // if (await firstResult.element.isVisible().catch(() => false)) {
-        //   this.logger.log(
-        //     `Clicking on activity item: ${firstResult.fileName}...`
-        //   );
-        //   await firstResult.element.click();
-        // }
+        if (logFilterConditions.lastSync >= activityTimestamp) {
+          this.logger.warn(
+            `Skipping: Activity date (${activityTimestamp.toLocaleString()})`
+          );
+          return;
+        }
+        this.logger.log(`Timestamp check passed, proceeding...`);
 
         const dropDownMenuButton = page.locator(
           ".activity-icon--medium.pa-details__menu-icon.fas.fa-ellipsis-v"
@@ -490,26 +450,22 @@ export class MediaShuttleService {
             await download.saveAs(downloadPath);
             this.logger.log(`File saved to: ${downloadPath}`);
 
-            // Check if it's a zip file and extract it
+            // Check zip file and extract
             if (suggestedFilename.endsWith(".zip")) {
               this.logger.log("Detected zip file, extracting...");
 
-              // Create extract directory (same name as zip without extension)
               const extractDir = path.join(
                 "D:\\MayoDownload",
                 path.basename(suggestedFilename, ".zip")
               );
 
-              // Ensure extract directory exists
               if (!fs.existsSync(extractDir)) {
                 fs.mkdirSync(extractDir, { recursive: true });
               }
 
-              // Extract the zip file
               await this.extractZipFile(downloadPath, extractDir);
               this.logger.log(`Files extracted to: ${extractDir}`);
 
-              // Optional: Delete the zip file after extraction
               fs.unlinkSync(downloadPath);
               this.logger.log("Zip file deleted after extraction");
             }
